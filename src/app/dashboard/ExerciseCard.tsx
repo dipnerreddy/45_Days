@@ -1,59 +1,81 @@
-// src/app/dashboard/ExerciseCard.tsx
 "use client";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ParsedExercise } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { WorkoutRow } from "@/lib/types";
 
-type ExerciseCardProps = {
-  exercise: ParsedExercise;
-  exerciseNumber: number; // <-- ADD THIS PROP
-  routine: string | null;
-  exerciseState: boolean[];
-  onSetCompletionChange: (setIndex: number, isCompleted: boolean) => void;
+// Type for the data of a single set
+export type SetData = {
+  weight: string;
+  reps: string;
+  completed: boolean;
 };
 
-export default function ExerciseCard({ exercise, exerciseNumber, routine, exerciseState, onSetCompletionChange }: ExerciseCardProps) {
+type ExerciseCardProps = {
+  exercise: WorkoutRow;
+  setsData: SetData[];
+  onSetDataChange: (setIndex: number, newSetData: SetData) => void;
+};
+
+export default function ExerciseCard({ exercise, setsData, onSetDataChange }: ExerciseCardProps) {
+  const numberOfSets = parseInt(exercise.Sets, 10);
+
   return (
-    <div className="space-y-4 rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          {/* Exercise Number */}
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary">
-            {exerciseNumber}
-          </span>
-          {/* Exercise Name */}
-          <div>
-            <h3 className="text-lg font-semibold">{exercise.name}</h3>
-            <p className="text-sm font-medium text-muted-foreground">{exercise.sets} sets × {exercise.reps} reps</p>
+    <Card>
+      <CardHeader>
+        <CardTitle>{exercise.ExerciseName}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {/* Header Row */}
+          <div className="grid grid-cols-4 items-center gap-2 text-xs font-semibold text-muted-foreground">
+            <div className="col-span-1">SET</div>
+            <div className="col-span-1">WEIGHT (KG)</div>
+            <div className="col-span-1">REPS</div>
+            <div className="col-span-1 text-right">DONE</div>
           </div>
-        </div>
-      </div>
 
-      {routine === 'Gym' && (
-        <div className="pl-11"> {/* Indent the weight input to align with text */}
-          <div className="space-y-2">
-            <Label htmlFor={`${exercise.name}-weight`} className="text-xs text-muted-foreground">Weight (kg)</Label>
-            <Input id={`${exercise.name}-weight`} type="number" placeholder="0" className="h-9" />
-          </div>
+          {/* Data Rows for each set */}
+          {Array.from({ length: numberOfSets }).map((_, setIndex) => {
+            const setData = setsData[setIndex] || { weight: '', reps: exercise.Reps, completed: false };
+            
+            return (
+              <div
+                key={setIndex}
+                className="grid grid-cols-4 items-center gap-2 rounded-lg p-2 transition-colors has-[:checked]:bg-green-50"
+              >
+                <div className="col-span-1 font-bold">Set {setIndex + 1}</div>
+                <div className="col-span-1">
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    className="h-9"
+                    value={setData.weight}
+                    onChange={(e) => onSetDataChange(setIndex, { ...setData, weight: e.target.value })}
+                  />
+                </div>
+                <div className="col-span-1">
+                  <Input
+                    type="number"
+                    className="h-9"
+                    value={setData.reps}
+                    onChange={(e) => onSetDataChange(setIndex, { ...setData, reps: e.target.value })}
+                  />
+                </div>
+                <div className="col-span-1 flex justify-end">
+                  <Checkbox
+                    className="h-6 w-6"
+                    checked={setData.completed}
+                    onCheckedChange={(checked) => onSetDataChange(setIndex, { ...setData, completed: !!checked })}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
-      )}
-
-      <div className="grid grid-cols-2 gap-3 pl-11 sm:grid-cols-4">
-        {Array.from({ length: exercise.sets }).map((_, setIndex) => (
-          <div key={setIndex} className="flex items-center space-x-2 rounded-md border p-2 transition-colors hover:bg-muted/50">
-            <Checkbox
-              id={`${exercise.name}-set-${setIndex}`}
-              checked={exerciseState[setIndex] || false}
-              onCheckedChange={(checked) => onSetCompletionChange(setIndex, !!checked)}
-            />
-            <Label htmlFor={`${exercise.name}-set-${setIndex}`} className="cursor-pointer text-sm font-medium leading-none">
-              Set {setIndex + 1}
-            </Label>
-          </div>
-        ))}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
