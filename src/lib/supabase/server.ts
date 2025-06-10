@@ -1,7 +1,10 @@
+// src/lib/supabase/server.ts
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-export const createClient = () => {
+// This function will be used IN our server components.
+// It correctly handles creating the client with the cookie store.
+export const createSupabaseServerClient = () => {
   const cookieStore = cookies()
 
   return createServerClient(

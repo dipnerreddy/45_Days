@@ -3,13 +3,17 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+// UI Components
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
-import { Calendar, Dumbbell, LineChart, Loader2, User } from 'lucide-react';
+import { Loader2, Dumbbell, User } from 'lucide-react';
+
+// Type definitions
 import { Profile, WorkoutRow } from '@/lib/types';
 
 // Define the shape of our detailed progress state
@@ -21,6 +25,7 @@ type DashboardClientProps = {
   fullWorkoutPlan: WorkoutRow[]; 
 };
 
+// A small, static list of motivational quotes
 const quotes = [
     "Every workout brings you closer to your goal.",
     "Discipline is choosing between what you want now and what you want most.",
@@ -39,13 +44,13 @@ export default function DashboardClient({ userProfile, fullWorkoutPlan }: Dashbo
 
   const dayNumber = (userProfile.current_streak || 0) + 1;
 
-  // Filter the workout plan for today's exercises
+  // Memoize the workout plan for today's exercises
   const todaysWorkout = useMemo(() => 
     fullWorkoutPlan.filter(row => 
-      row && parseInt(row.Day) === dayNumber && row.ExerciseName
+      row && parseInt(row.Day, 10) === dayNumber && row.ExerciseName
     ), [fullWorkoutPlan, dayNumber]);
 
-  // Create the initial state for progress tracking
+  // Create the initial state for progress tracking based on today's workout
   const initialProgress = useMemo(() => {
     const progress: WorkoutProgress = {};
     todaysWorkout.forEach(exercise => {
@@ -60,8 +65,9 @@ export default function DashboardClient({ userProfile, fullWorkoutPlan }: Dashbo
   
   const [workoutProgress, setWorkoutProgress] = useState<WorkoutProgress>(initialProgress);
 
-  // Set the daily quote on component mount
+  // Set the daily quote when the component mounts
   useEffect(() => {
+    // Use the date to pick a quote, so it changes daily
     const quoteIndex = new Date().getDate() % quotes.length;
     setMotivationalQuote(quotes[quoteIndex]);
   }, []);
@@ -82,42 +88,59 @@ export default function DashboardClient({ userProfile, fullWorkoutPlan }: Dashbo
     });
   };
 
+  // Memoize the calculation for whether the entire workout is complete
   const isWorkoutComplete = useMemo(() => {
-    if (Object.keys(workoutProgress).length === 0 && todaysWorkout.length > 0) return false;
+    if (Object.keys(workoutProgress).length === 0 && todaysWorkout.length > 0) {
+      return false; // Not complete if there are workouts but no progress tracked yet
+    }
     return Object.values(workoutProgress).every(sets =>
       sets.every(set => set.completed)
     );
   }, [workoutProgress, todaysWorkout]);
 
   const handleCompleteWorkout = async () => {
-    if (!isWorkoutComplete) { // <-- Corrected line
-    toast({ title: "Incomplete Workout", description: "Please complete all sets.", variant: "destructive" });
-    return;
-  }
+    if (!isWorkoutComplete) {
+      toast({ title: "Incomplete Workout", description: "Please check all boxes to complete the workout.", variant: "destructive" });
+      return;
+    }
 
     setIsLoading(true);
-    const { error } = await supabase.rpc('mark_day_complete', {
-      user_id_param: userProfile.id,
-      day_number_param: dayNumber,
-      workout_data_param: workoutProgress,
-    });
-    setIsLoading(false);
 
-    if (error) {
-      toast({ title: "Error", description: `Failed to save progress: ${error.message}`, variant: "destructive" });
-    } else {
-      toast({ title: "Day Complete!", description: `Awesome! Day ${dayNumber} finished.` });
+    try {
+      // ✅ CORRECTED RPC CALL: Removed user_id_param.
+      // The database function gets the user ID securely from the session.
+      const { error } = await supabase.rpc('mark_day_complete', {
+        day_number_param: dayNumber,
+        workout_data_param: workoutProgress,
+      });
+
+      if (error) {
+        // This will catch errors from the database function itself
+        throw error;
+      }
+
+      toast({ title: "Day Complete!", description: `Awesome work! Day ${dayNumber} is in the books.` });
+      
+      // Navigate or refresh
       if (dayNumber >= 45) {
         router.push('/certificate');
       } else {
-        router.refresh();
+        // Refresh the page to show the updated streak
+        router.refresh(); 
       }
+
+    } catch (error: any) {
+      // This will catch both network errors and database errors
+      console.error("Failed to complete workout:", error);
+      toast({ title: "Error", description: `Failed to save progress: ${error.message}`, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Header from your UI example */}
+    <div className="min-h-screen bg-gray-50 pb-24"> {/* Increased padding-bottom */}
+      {/* Sticky Header */}
       <div className="bg-white shadow-sm sticky top-0 z-10 px-4 py-4">
         <div className="flex justify-between items-center">
           <div>
@@ -125,9 +148,9 @@ export default function DashboardClient({ userProfile, fullWorkoutPlan }: Dashbo
             <p className="text-gray-600">Day {dayNumber} of 45</p>
           </div>
           <div className="text-right">
-            <div className="flex items-center gap-2">
-              <span>🔥</span>
-              <span className="font-bold text-primary">{userProfile.current_streak || 0}</span>
+            <div className="flex items-center justify-end gap-2">
+              <span role="img" aria-label="fire">🔥</span>
+              <span className="font-bold text-primary text-xl">{userProfile.current_streak || 0}</span>
             </div>
             <p className="text-sm text-gray-600">day streak</p>
           </div>
@@ -151,11 +174,11 @@ export default function DashboardClient({ userProfile, fullWorkoutPlan }: Dashbo
         {/* Today's Workout Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Today&apos;s Workout: {todaysWorkout[0]?.DayTitle}</CardTitle>
+            <CardTitle>Today's Workout: {todaysWorkout[0]?.DayTitle || 'Rest Day'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {todaysWorkout.length === 0 ? (
-              <p className="text-gray-600">Workout complete for today or it's a rest day!</p>
+              <p className="text-gray-600 text-center py-4">Looks like a rest day. Enjoy it!</p>
             ) : (
               todaysWorkout.map((exercise) => (
                 <div key={exercise.ExerciseName} className="border rounded-lg p-4 space-y-4">
@@ -176,6 +199,7 @@ export default function DashboardClient({ userProfile, fullWorkoutPlan }: Dashbo
                             value={setData.weight}
                             onChange={(e) => updateWeight(exercise.ExerciseName, setIndex, e.target.value)}
                             className="h-9"
+                            disabled={userProfile.workout_routine !== 'Gym'}
                           />
                         </div>
                         <div className="col-span-5 flex items-center justify-end space-x-2">
@@ -184,7 +208,7 @@ export default function DashboardClient({ userProfile, fullWorkoutPlan }: Dashbo
                             checked={setData.completed}
                             onCheckedChange={(checked) => updateSetCompletion(exercise.ExerciseName, setIndex, !!checked)}
                           />
-                          <label htmlFor={`${exercise.ExerciseName}-${setIndex}`} className="text-sm">Done</label>
+                          <label htmlFor={`${exercise.ExerciseName}-${setIndex}`} className="text-sm font-medium">Done</label>
                         </div>
                       </div>
                     ))}
@@ -194,26 +218,24 @@ export default function DashboardClient({ userProfile, fullWorkoutPlan }: Dashbo
             )}
             
             {todaysWorkout.length > 0 && (
-              <Button onClick={handleCompleteWorkout} className="w-full" disabled={!isWorkoutComplete || isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Complete Today&apos;s Workout
+              <Button onClick={handleCompleteWorkout} className="w-full h-12 text-lg" disabled={!isWorkoutComplete || isLoading}>
+                {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : "Mark Day as Complete"}
               </Button>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Bottom Navigation */}
       {/* Bottom Navigation Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t z-20">
         <div className="grid grid-cols-2 gap-1 p-2">
-            <Button variant="secondary" className="h-12 flex flex-col">
-                <Dumbbell size={20}/>
-                <span className="text-xs">Dashboard</span>
+            <Button variant="secondary" className="h-14 flex flex-col gap-1">
+                <Dumbbell size={24}/>
+                <span className="text-xs font-semibold">Dashboard</span>
             </Button>
-            <Button variant="ghost" className="h-12 flex flex-col" onClick={() => router.push('/profile')}>
-                <User size={20}/>
-                <span className="text-xs">Profile</span>
+            <Button variant="ghost" className="h-14 flex flex-col gap-1" onClick={() => router.push('/profile')}>
+                <User size={24}/>
+                <span className="text-xs font-semibold">Profile</span>
             </Button>
         </div>
       </div>

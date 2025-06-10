@@ -4,6 +4,7 @@ import Papa from 'papaparse';
 import DashboardClient from './DashboardClient';
 import { WorkoutRow, Profile } from '@/lib/types';
 
+
 /**
  * Normalizes the workout data from the CSV.
  * The CSV export from Google Sheets leaves the 'Day' column blank for subsequent
