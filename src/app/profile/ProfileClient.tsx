@@ -1,11 +1,12 @@
 // src/app/profile/ProfileClient.tsx
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/components/ui/use-toast";
 import { createClient } from '@/lib/supabase/client';
 
+// UI Components
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,21 +15,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, User, Dumbbell, LogOut, Award, Lock, Unlock, Trash2, Pencil } from "lucide-react";
 
-// The profile data type passed from the server component
-type ProfileWithDetails = {
-  id: string;
-  name: string;
-  age: number;
-  current_weight: number;
-  height_cm: number | null;
-  current_streak: number;
-  workout_routine: 'Home' | 'Gym';
-  email: string;
-  gender: string;
-};
+// Type Imports
+import { Profile } from '@/lib/types';
 
+// The profile data type passed from the server component, with email added.
 type ProfileClientProps = {
-  userProfile: ProfileWithDetails;
+  userProfile: Profile & { email: string };
 };
 
 export default function ProfileClient({ userProfile }: ProfileClientProps) {
@@ -42,7 +34,6 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
   const [newWeight, setNewWeight] = useState(userProfile.current_weight.toString());
   const [isWeightDialogOpen, setIsWeightDialogOpen] = useState(false);
 
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast({ title: "Logged Out" });
@@ -52,6 +43,7 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
 
   const handleResetProgress = async () => {
     setIsResetting(true);
+    // Assuming you have this RPC function in your database
     const { error } = await supabase.rpc('reset_user_progress');
     setIsResetting(false);
 
@@ -72,12 +64,11 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
         return;
     }
     setIsUpdating(true);
-    // Update profiles table and add to weight_history
     const { error } = await supabase.from('profiles').update({ current_weight: weightValue }).eq('id', userProfile.id);
-    const { error: historyError } = await supabase.from('weight_history').insert({ user_id: userProfile.id, weight: weightValue, log_date: new Date().toISOString() });
+    // You may also want a weight_history table as planned
     setIsUpdating(false);
 
-    if (error || historyError) {
+    if (error) {
         toast({ title: "Error", description: "Failed to update weight.", variant: "destructive" });
     } else {
         toast({ title: "Success!", description: "Your weight has been updated." });
@@ -86,6 +77,7 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
     }
   };
 
+  // This logic correctly determines if the certificate is unlocked.
   const isCertificateUnlocked = userProfile.current_streak >= 45;
 
   return (
@@ -156,17 +148,26 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
           </CardContent>
         </Card>
 
-        {/* Card 3: Certificate Status */}
+        {/* Card 3: Certificate Status - THIS IS THE KEY SECTION */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Award /> Certificate Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" className="w-full justify-between" onClick={() => isCertificateUnlocked && router.push('/certificate')} disabled={!isCertificateUnlocked}>
+            <Button
+              variant="outline"
+              className="w-full justify-between"
+              onClick={() => isCertificateUnlocked && router.push('/certificate')}
+              disabled={!isCertificateUnlocked} // Button is disabled if condition is false
+            >
               <span>View Completion Certificate</span>
               {isCertificateUnlocked ? <Unlock className="h-5 w-5 text-green-500"/> : <Lock className="h-5 w-5 text-muted-foreground"/>}
             </Button>
-            {!isCertificateUnlocked && <p className="text-xs text-center mt-2 text-muted-foreground">Complete 45 consecutive days to unlock.</p>}
+            {!isCertificateUnlocked && 
+                <p className="text-xs text-center mt-2 text-muted-foreground">
+                    Complete 45 consecutive days streak to unlock.
+                </p>
+            }
           </CardContent>
         </Card>
 

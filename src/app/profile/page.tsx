@@ -1,12 +1,10 @@
 // src/app/profile/page.tsx
 import { redirect } from 'next/navigation';
-// ❌ REMOVED: import { createClient } from '@/lib/supabase/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server'; // ✅ ADDED: The correct import
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 import ProfileClient from './ProfileClient';
-import { Profile } from '@/lib/types'; // It's good practice to import your types
+import { Profile } from '@/lib/types'; // Import the main Profile type
 
 export default async function ProfilePage() {
-  // ✅ THE FIX: Call the new helper function here
   const supabase = createSupabaseServerClient();
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -14,12 +12,12 @@ export default async function ProfilePage() {
     redirect('/login');
   }
 
-  // Fetch the profile data
+  // Fetch all columns from the profiles table for the current user
   const { data: profileData, error: profileError } = await supabase
     .from('profiles')
-    .select('*') // Select all columns from the profiles table
+    .select('*') 
     .eq('id', user.id)
-    .single();
+    .single<Profile>(); // Use the imported Profile type here for type safety
 
   if (profileError || !profileData) {
     console.error("Profile fetch error:", profileError?.message);
@@ -27,11 +25,10 @@ export default async function ProfilePage() {
   }
 
   // Combine the profile data with the user's email from the auth object
-  // Casting to Profile helps with type safety in the client component
-  const userProfile = {
+  const userProfileWithEmail = {
     ...profileData,
     email: user.email || 'No email provided',
-  } as Profile & { email: string };
+  };
 
-  return <ProfileClient userProfile={userProfile} />;
+  return <ProfileClient userProfile={userProfileWithEmail} />;
 }
