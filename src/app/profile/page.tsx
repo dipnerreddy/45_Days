@@ -1,10 +1,13 @@
 // src/app/profile/page.tsx
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+// ❌ REMOVED: import { createClient } from '@/lib/supabase/server';
+import { createSupabaseServerClient } from '@/lib/supabase/server'; // ✅ ADDED: The correct import
 import ProfileClient from './ProfileClient';
+import { Profile } from '@/lib/types'; // It's good practice to import your types
 
 export default async function ProfilePage() {
-  const supabase = createClient();
+  // ✅ THE FIX: Call the new helper function here
+  const supabase = createSupabaseServerClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -24,10 +27,11 @@ export default async function ProfilePage() {
   }
 
   // Combine the profile data with the user's email from the auth object
+  // Casting to Profile helps with type safety in the client component
   const userProfile = {
     ...profileData,
-    email: user.email || 'No email provided', // Add the email here
-  };
+    email: user.email || 'No email provided',
+  } as Profile & { email: string };
 
   return <ProfileClient userProfile={userProfile} />;
 }
