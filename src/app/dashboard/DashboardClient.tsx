@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2 } from 'lucide-react';
+import { Calendar, Dumbbell, LineChart, Loader2, User } from 'lucide-react';
 import { Profile, WorkoutRow } from '@/lib/types';
 
 // Define the shape of our detailed progress state
@@ -204,11 +204,17 @@ export default function DashboardClient({ userProfile, fullWorkoutPlan }: Dashbo
       </div>
 
       {/* Bottom Navigation */}
+      {/* Bottom Navigation Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t">
-        <div className="grid grid-cols-3 gap-1 p-2">
-          <Button variant="ghost" className="h-12">Dashboard</Button>
-          <Button variant="ghost" className="h-12" onClick={() => router.push('/weekly-summary')}>Summary</Button>
-          <Button variant="ghost" className="h-12" onClick={() => router.push('/profile')}>Profile</Button>
+        <div className="grid grid-cols-2 gap-1 p-2">
+            <Button variant="secondary" className="h-12 flex flex-col">
+                <Dumbbell size={20}/>
+                <span className="text-xs">Dashboard</span>
+            </Button>
+            <Button variant="ghost" className="h-12 flex flex-col" onClick={() => router.push('/profile')}>
+                <User size={20}/>
+                <span className="text-xs">Profile</span>
+            </Button>
         </div>
       </div>
     </div>
