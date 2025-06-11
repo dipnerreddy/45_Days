@@ -1,3 +1,5 @@
+// src/app/dashboard/page.tsx
+
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server'; // ✅ ADDED: Import the new helper
 import Papa from 'papaparse';

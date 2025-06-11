@@ -1,3 +1,5 @@
+// src/app/dashboard/ExerciseCard.tsx
+
 "use client";
 
 import { Checkbox } from "@/components/ui/checkbox";

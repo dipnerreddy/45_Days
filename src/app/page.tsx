@@ -1,3 +1,5 @@
+// src/app/page.tsx
+
 "use client"; // <-- This is CRUCIAL for using hooks
 
 import { Button } from "@/components/ui/button";

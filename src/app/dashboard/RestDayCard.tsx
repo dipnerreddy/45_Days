@@ -1,3 +1,5 @@
+// src/app/dashboard/RestDayCard.tsx
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
