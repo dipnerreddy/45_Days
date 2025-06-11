@@ -5,8 +5,8 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useRouter } from "next/navigation"; // <-- Next.js router
-import { useAuth } from "@/hooks/useAuth"; // <-- We'll assume this hook exists
 import { useEffect } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 const LandingPage = () => {
   const router = useRouter(); // <-- Use the Next.js router hook
