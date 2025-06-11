@@ -174,7 +174,7 @@ export default function DashboardClient({ userProfile, fullWorkoutPlan }: Dashbo
         {/* Today's Workout Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Today's Workout: {todaysWorkout[0]?.DayTitle || 'Rest Day'}</CardTitle>
+            <CardTitle>Today&apos;s Workout: {todaysWorkout[0]?.DayTitle || 'Rest Day'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {todaysWorkout.length === 0 ? (
