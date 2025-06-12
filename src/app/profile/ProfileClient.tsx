@@ -35,7 +35,8 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
   
   // State for the editable values
   const [newName, setNewName] = useState(userProfile.name);
-  const [newWeight, setNewWeight] = useState(userProfile.current_weight.toString());
+  // const [newWeight, setNewWeight] = useState(userProfile.current_weight.toString());
+  const [newWeight, setNewWeight] = useState(userProfile.current_weight?.toString() || '');
   const [newRoutine, setNewRoutine] = useState(userProfile.workout_routine);
 
   // --- TASK 1: Handle Name Update ---
@@ -75,6 +76,19 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
         setIsWeightDialogOpen(false);
         router.refresh();
     }
+  };
+
+  // Add this helper function
+  const calculateAge = (dateString: string) => {
+      if (!dateString) return 'N/A';
+      const today = new Date();
+      const birthDate = new Date(dateString);
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+      }
+      return age;
   };
 
   // --- TASK 2: Handle Routine Change ---
@@ -195,7 +209,8 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
                     </Dialog>
                 </div>
             </div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Age:</span> <span className="font-medium">{userProfile.age}</span></div>
+            {/* <div className="flex justify-between"><span className="text-muted-foreground">Age:</span> <span className="font-medium">{userProfile.age}</span></div> */}
+            <div className="flex justify-between"><span className="text-muted-foreground">Age:</span> <span className="font-medium">{calculateAge(userProfile.dob)}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Gender:</span> <span className="font-medium capitalize">{userProfile.gender}</span></div>
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Weight:</span>
