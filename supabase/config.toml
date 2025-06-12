@@ -1,0 +1,7 @@
+# supabase/config.toml
+
+[functions.daily-reset-cron]
+verify_jwt = false
+
+[functions.daily-reminder-cron]
+verify_jwt = false
