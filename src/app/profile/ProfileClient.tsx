@@ -7,18 +7,17 @@ import { useToast } from "@/components/ui/use-toast";
 import { createClient } from '@/lib/supabase/client';
 
 // UI Components
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, User, Dumbbell, LogOut, Award, Lock, Unlock, Trash2, Pencil } from "lucide-react";
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, User, Dumbbell, LogOut, Award, Lock, Unlock, Pencil, RefreshCw, Edit } from "lucide-react";
 
 // Type Imports
 import { Profile } from '@/lib/types';
 
-// The profile data type passed from the server component, with email added.
 type ProfileClientProps = {
   userProfile: Profile & { email: string };
 };
@@ -28,35 +27,37 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
   const { toast } = useToast();
   const supabase = createClient();
   
-  const [isResetting, setIsResetting] = useState(false);
-  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  // State for all edit dialogs and loading states
   const [isUpdating, setIsUpdating] = useState(false);
-  const [newWeight, setNewWeight] = useState(userProfile.current_weight.toString());
+  const [isNameDialogOpen, setIsNameDialogOpen] = useState(false);
   const [isWeightDialogOpen, setIsWeightDialogOpen] = useState(false);
+  const [isRoutineDialogOpen, setIsRoutineDialogOpen] = useState(false);
+  
+  // State for the editable values
+  const [newName, setNewName] = useState(userProfile.name);
+  const [newWeight, setNewWeight] = useState(userProfile.current_weight.toString());
+  const [newRoutine, setNewRoutine] = useState(userProfile.workout_routine);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast({ title: "Logged Out" });
-    router.push('/login');
-    router.refresh();
-  };
-
-  const handleResetProgress = async () => {
-    setIsResetting(true);
-    // Assuming you have this RPC function in your database
-    const { error } = await supabase.rpc('reset_user_progress');
-    setIsResetting(false);
+  // --- TASK 1: Handle Name Update ---
+  const handleUpdateName = async () => {
+    if (!newName || newName.trim().length < 2) {
+      toast({ title: "Invalid Name", description: "Name must be at least 2 characters.", variant: "destructive" });
+      return;
+    }
+    setIsUpdating(true);
+    const { error } = await supabase.from('profiles').update({ name: newName.trim() }).eq('id', userProfile.id);
+    setIsUpdating(false);
 
     if (error) {
-      toast({ title: "Error", description: `Could not reset progress: ${error.message}`, variant: "destructive" });
+      toast({ title: "Error", description: "Failed to update name.", variant: "destructive" });
     } else {
-      toast({ title: "Progress Reset!", description: "Your challenge has been reset to Day 1." });
-      setIsResetDialogOpen(false);
-      router.push('/dashboard');
+      toast({ title: "Success!", description: "Your name has been updated." });
+      setIsNameDialogOpen(false);
       router.refresh();
     }
   };
   
+  // --- Handle Weight Update (Existing Logic) ---
   const handleUpdateWeight = async () => {
     const weightValue = parseFloat(newWeight);
     if (isNaN(weightValue) || weightValue <= 30) {
@@ -65,7 +66,6 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
     }
     setIsUpdating(true);
     const { error } = await supabase.from('profiles').update({ current_weight: weightValue }).eq('id', userProfile.id);
-    // You may also want a weight_history table as planned
     setIsUpdating(false);
 
     if (error) {
@@ -77,16 +77,39 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
     }
   };
 
-  // This logic correctly determines if the certificate is unlocked.
+  // --- TASK 2: Handle Routine Change ---
+  const handleChangeRoutine = async () => {
+    if (newRoutine === userProfile.workout_routine) {
+        setIsRoutineDialogOpen(false);
+        return;
+    }
+    setIsUpdating(true);
+    const { error } = await supabase.rpc('change_routine_and_reset', { new_routine: newRoutine });
+    setIsUpdating(false);
+
+    if (error) {
+        toast({ title: "Error", description: `Could not change routine: ${error.message}`, variant: "destructive" });
+    } else {
+        toast({ title: "Routine Changed!", description: "Your routine has been updated and progress has been reset." });
+        setIsRoutineDialogOpen(false);
+        router.push('/dashboard'); // Go to dashboard to see the change
+        router.refresh();
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast({ title: "Logged Out" });
+    router.push('/');
+    router.refresh();
+  };
+
   const isCertificateUnlocked = userProfile.current_streak >= 45;
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm sticky top-0 z-10 px-4 py-4 flex justify-between items-center">
-        <h1 className="text-xl font-bold">Profile</h1>
-        <Button variant="ghost" size="icon" onClick={handleLogout}>
-          <LogOut className="h-5 w-5 text-muted-foreground" />
-        </Button>
+      <div className="bg-white shadow-sm sticky top-0 z-10 px-4 py-4">
+        <h1 className="text-xl font-bold">Your Profile</h1>
       </div>
 
       <div className="p-4 space-y-6 pb-24">
@@ -95,7 +118,7 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
           <CardHeader>
             <CardTitle>Challenge Progress</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-center">
               <div>
                 <div className="text-2xl font-bold text-primary">{userProfile.current_streak + 1}/45</div>
@@ -106,11 +129,41 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
                 <div className="text-sm text-muted-foreground">Day Streak</div>
               </div>
             </div>
-            <div className="mt-4">
-              <Badge variant="outline" className="w-full justify-center text-sm py-2">
-                {userProfile.workout_routine === 'Gym' ? '🏋️ Gym' : '🏠 Home'} Routine (Locked)
-              </Badge>
-            </div>
+            {/* --- TASK 2: Functional Routine Changer --- */}
+            <Dialog open={isRoutineDialogOpen} onOpenChange={setIsRoutineDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="w-full justify-between items-center text-sm py-2 h-auto">
+                    <span>Routine: <span className="font-bold">{userProfile.workout_routine === 'Gym' ? '🏋️ Gym' : '🏠 Home'}</span></span>
+                    <div className="flex items-center gap-2 text-primary">
+                        <Edit size={14}/> Change
+                    </div>
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Change Your Workout Routine</DialogTitle>
+                  <DialogDescription className="pt-2">
+                    <span className="font-bold text-destructive">Warning:</span> Switching your routine will reset all challenge progress to Day 1.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                  <Label>New Routine</Label>
+                  <Select onValueChange={(value: 'Home' | 'Gym') => setNewRoutine(value)} defaultValue={userProfile.workout_routine}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="Home">🏠 Home</SelectItem>
+                          <SelectItem value="Gym">🏋️ Gym</SelectItem>
+                      </SelectContent>
+                  </Select>
+                </div>
+                <DialogFooter>
+                  <Button variant="ghost" onClick={() => setIsRoutineDialogOpen(false)}>Cancel</Button>
+                  <Button variant="destructive" onClick={handleChangeRoutine} disabled={isUpdating}>
+                    {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Confirm & Reset
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </CardContent>
         </Card>
 
@@ -120,7 +173,28 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
             <CardTitle>Personal Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">Name:</span> <span className="font-medium">{userProfile.name}</span></div>
+            {/* --- TASK 1: Editable Name --- */}
+            <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Name:</span>
+                <div className="flex items-center gap-2">
+                    <span className="font-medium">{userProfile.name}</span>
+                    <Dialog open={isNameDialogOpen} onOpenChange={setIsNameDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" size="icon" className="h-6 w-6"><Pencil className="h-3 w-3"/></Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader><DialogTitle>Update Your Name</DialogTitle></DialogHeader>
+                            <Input placeholder="Enter your full name" value={newName} onChange={(e) => setNewName(e.target.value)} />
+                            <DialogFooter>
+                                <Button variant="ghost" onClick={() => setIsNameDialogOpen(false)}>Cancel</Button>
+                                <Button onClick={handleUpdateName} disabled={isUpdating}>
+                                    {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+            </div>
             <div className="flex justify-between"><span className="text-muted-foreground">Age:</span> <span className="font-medium">{userProfile.age}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Gender:</span> <span className="font-medium capitalize">{userProfile.gender}</span></div>
             <div className="flex justify-between items-center">
@@ -148,54 +222,35 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
           </CardContent>
         </Card>
 
-        {/* Card 3: Certificate Status - THIS IS THE KEY SECTION */}
+        {/* Card 3: Certificate Status */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Award /> Certificate Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button
-              variant="outline"
-              className="w-full justify-between"
-              onClick={() => isCertificateUnlocked && router.push('/certificate')}
-              disabled={!isCertificateUnlocked} // Button is disabled if condition is false
-            >
+            <Button variant="outline" className="w-full justify-between" onClick={() => isCertificateUnlocked && router.push('/certificate')} disabled={!isCertificateUnlocked}>
               <span>View Completion Certificate</span>
               {isCertificateUnlocked ? <Unlock className="h-5 w-5 text-green-500"/> : <Lock className="h-5 w-5 text-muted-foreground"/>}
             </Button>
             {!isCertificateUnlocked && 
                 <p className="text-xs text-center mt-2 text-muted-foreground">
-                    Complete 45 consecutive days streak to unlock.
+                    Complete 45 consecutive days to unlock.
                 </p>
             }
           </CardContent>
         </Card>
-
-        {/* Card 4: Danger Zone */}
-        <Alert variant="destructive">
-          <Trash2 className="h-4 w-4" />
-          <AlertTitle>Danger Zone</AlertTitle>
-          <AlertDescription className="flex items-center justify-between">
-            <span>Reset your challenge progress.</span>
-            <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="destructive" size="sm">Reset</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Are you absolutely sure?</DialogTitle>
-                  <DialogDescription>This will permanently reset your progress to Day 1.</DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button variant="ghost" onClick={() => setIsResetDialogOpen(false)}>Cancel</Button>
-                  <Button variant="destructive" onClick={handleResetProgress} disabled={isResetting}>
-                    {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Yes, reset
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </AlertDescription>
-        </Alert>
+        
+        {/* --- TASK 4: Large Logout Button --- */}
+       <Button 
+          variant="default" // Use the default variant to get the solid background
+          className="w-full bg-primary text-primary-foreground hover:bg-primary/90" // Custom classes for color
+          onClick={handleLogout}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Log Out
+        </Button>
+        
+        {/* --- TASK 3: Danger Zone Removed --- */}
       </div>
 
       {/* Bottom Navigation */}
