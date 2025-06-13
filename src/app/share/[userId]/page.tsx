@@ -1,8 +1,8 @@
-// app/share/[userId]/page.tsx
+// src/app/share/[userId]/page.tsx
 
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Button } from '@/components/ui/button';
 
 type Props = {
@@ -12,7 +12,7 @@ type Props = {
 // This function generates the metadata for the page
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const userId = params.userId;
-  const supabase = createClient();
+  const supabase = createSupabaseServerClient();
 
   // Fetch the user's name to personalize the social media preview
   const { data: profile } = await supabase

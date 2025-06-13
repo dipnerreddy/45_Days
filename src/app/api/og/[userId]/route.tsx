@@ -1,30 +1,39 @@
-// app/share/[userId]/route.tsx
+// src/app/api/og/[userId]/route.tsx
 
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { ImageResponse } from 'next/og';
-import { createClient } from '@/lib/supabase/server';
+import { NextRequest } from 'next/server';
 
-export const runtime = 'edge';
+// DO NOT ADD `export const runtime = 'edge';` HERE.
+// This route MUST run on the default Node.js runtime to use the
+// Supabase SSR helper function (createSupabaseServerClient).
 
-export async function GET(request: Request, { params }: { params: { userId: string } }) {
-  const userId = params.userId;
+export async function GET(
+  request: NextRequest, // This signature is correct for the Node.js runtime
+  { params }: { params: { userId: string } }
+) {
+  const { userId } = params;
+
+  if (!userId) {
+    return new Response('User ID is missing', { status: 400 });
+  }
 
   try {
-    const supabase = createClient();
-    const { data: profile } = await supabase
+    const supabase = createSupabaseServerClient();
+    const { data: profile, error } = await supabase
       .from('profiles')
       .select('name, workout_routine')
       .eq('id', userId)
       .single();
 
-    if (!profile) {
+    if (error || !profile) {
+      console.error(`Supabase error or user not found for ID ${userId}:`, error?.message);
       return new Response('User not found', { status: 404 });
     }
 
-    // Use Inter font if available or a default
-    const font = fetch(
-      new URL('../../../assets/Inter-Bold.ttf', import.meta.url)
+    const fontData = await fetch(
+      new URL('./Inter-Bold.ttf', import.meta.url)
     ).then((res) => res.arrayBuffer());
-    const fontData = await font;
 
     return new ImageResponse(
       (
@@ -65,7 +74,7 @@ export async function GET(request: Request, { params }: { params: { userId: stri
       }
     );
   } catch (e: any) {
-    console.error(e.message);
+    console.error(`Failed to generate OG image for user ${userId}:`, e.message);
     return new Response(`Failed to generate the image`, { status: 500 });
   }
 }

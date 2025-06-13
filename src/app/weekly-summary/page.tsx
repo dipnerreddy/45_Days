@@ -1,11 +1,12 @@
 // app/weekly-summary/page.tsx
 
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+
 import WeeklySummaryClient from './WeeklySummaryClient';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export default async function WeeklySummaryPage() {
-  const supabase = createClient();
+  const supabase = createSupabaseServerClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
