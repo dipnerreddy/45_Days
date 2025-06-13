@@ -1,15 +1,14 @@
 // src/app/api/og/[userId]/route.tsx
 
-import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
+import { createEdgeSupabaseClient } from '@/lib/supabase/edge-client'; // Use the new Edge-compatible client
 
-// DO NOT ADD `export const runtime = 'edge';` HERE.
-// This route MUST run on the default Node.js runtime to use the
-// Supabase SSR helper function (createSupabaseServerClient).
+// This route MUST run on the Edge runtime for ImageResponse.
+export const runtime = 'edge';
 
 export async function GET(
-  request: NextRequest, // This signature is correct for the Node.js runtime
+  request: NextRequest,
   { params }: { params: { userId: string } }
 ) {
   const { userId } = params;
@@ -19,7 +18,7 @@ export async function GET(
   }
 
   try {
-    const supabase = createSupabaseServerClient();
+    const supabase = createEdgeSupabaseClient();
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('name, workout_routine')
@@ -27,13 +26,12 @@ export async function GET(
       .single();
 
     if (error || !profile) {
-      console.error(`Supabase error or user not found for ID ${userId}:`, error?.message);
+      console.error(`OG Image: User not found for ID ${userId}:`, error?.message);
       return new Response('User not found', { status: 404 });
     }
 
-    const fontData = await fetch(
-      new URL('./Inter-Bold.ttf', import.meta.url)
-    ).then((res) => res.arrayBuffer());
+    const fontUrl = new URL('/fonts/Inter-Bold.ttf', request.nextUrl.origin);
+    const fontData = await fetch(fontUrl).then((res) => res.arrayBuffer());
 
     return new ImageResponse(
       (
@@ -42,28 +40,46 @@ export async function GET(
             height: '100%',
             width: '100%',
             display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
             backgroundColor: 'white',
-            border: '40px solid #FF5722',
-            fontFamily: '"Inter"',
           }}
         >
-          <div style={{ fontSize: 24, letterSpacing: '0.2em', color: '#4A5568' }}>
-            CERTIFICATE OF COMPLETION
-          </div>
-          <div style={{ fontSize: 72, fontWeight: 'bold', color: '#FF5722', marginTop: '40px' }}>
-            {profile.name}
-          </div>
-          <div style={{ fontSize: 36, marginTop: '20px', color: '#2D3748' }}>
-            has successfully completed the
-          </div>
-          <div style={{ fontSize: 48, fontWeight: 'bold', marginTop: '10px', color: '#2D3748' }}>
-            45-Day Fitness Challenge
-          </div>
-          <div style={{ fontSize: 24, marginTop: '10px', color: '#4A5568' }}>
-            ({profile.workout_routine} Routine)
+          <div style={{display: 'flex', height: '100%', width: '100%'}}>
+            {/* Left Vertical Brand Bar */}
+            <div style={{width: '96px', backgroundColor: '#FF5722', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', padding: '24px'}}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg>
+              <p style={{ transform: 'rotate(180deg)', color: 'white', fontWeight: 600, letterSpacing: '0.1em', writingMode: 'vertical-rl' }}>
+                45-DAY CHALLENGE
+              </p>
+            </div>
+            {/* Right Main Content Area */}
+            <div style={{ flex: '1', padding: '48px', display: 'flex', flexDirection: 'column' }}>
+              <div>
+                <p style={{ fontSize: '14px', fontWeight: 600, color: '#A0AEC0', letterSpacing: '0.1em' }}>CERTIFICATE OF ACHIEVEMENT</p>
+                <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#2D3748' }}>Official Completion Record</h1>
+              </div>
+              <div style={{ flexGrow: 1 }} />
+              <div>
+                <p style={{ fontSize: '18px', color: '#718096' }}>This certificate is proudly presented to</p>
+                <p style={{ fontSize: '72px', fontWeight: 900, color: '#1A202C', lineHeight: 1.1 }}>
+                  {profile.name}
+                </p>
+                <p style={{ fontSize: '18px', color: '#4A5568', paddingTop: '8px' }}>
+                  For the successful completion of the 
+                  <span style={{ fontWeight: 700 }}> 45-Day Fitness Challenge </span> 
+                  on the <span style={{ fontWeight: 700 }}>{profile.routine} Routine</span>.
+                </p>
+              </div>
+              <div style={{ flexGrow: 1 }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#48BB78" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                  <div>
+                    <p style={{ fontWeight: 700 }}>Completed Successfully</p>
+                    <p style={{ fontSize: '14px', color: '#718096' }}>Date of Completion</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       ),
