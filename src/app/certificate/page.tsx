@@ -36,13 +36,14 @@ export default async function CertificatePage() {
   }
 
   // Check the condition for the redirect
-  const shouldRedirect = !profile || profile.current_streak < 45;
+  // const shouldRedirect = !profile || profile.current_streak < 45;
+  const shouldRedirect = !profile || (profile.current_streak ?? 0) < 45;
   
   console.log(`Checking redirect condition...`);
   console.log(`Does profile exist? ${!!profile}`);
   console.log(`Profile streak value: ${profile?.current_streak}`);
   console.log(`Type of streak: ${typeof profile?.current_streak}`);
-  console.log(`Is streak < 45? ${profile ? profile.current_streak < 45 : 'N/A'}`);
+  console.log(`Is streak < 45? ${profile ? (profile.current_streak ?? 0) < 45 : 'N/A'}`);
   console.log(`FINAL DECISION: Should redirect? ${shouldRedirect}`);
   // --- END OF DEBUGGING ---
 

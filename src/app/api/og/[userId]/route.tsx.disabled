@@ -2,16 +2,17 @@
 
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
-import { createEdgeSupabaseClient } from '@/lib/supabase/edge-client'; // Use the new Edge-compatible client
+import { createEdgeSupabaseClient } from '@/lib/supabase/edge-client';
 
-// This route MUST run on the Edge runtime for ImageResponse.
 export const runtime = 'edge';
 
+// ✅ THE FIX: A simplified, more explicit type signature.
+// We accept the whole `context` object and then get `params` from it.
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  context: { params: { userId: string } }
 ) {
-  const { userId } = params;
+  const userId = context.params.userId; // Get userId from the context object
 
   if (!userId) {
     return new Response('User ID is missing', { status: 400 });
@@ -44,14 +45,12 @@ export async function GET(
           }}
         >
           <div style={{display: 'flex', height: '100%', width: '100%'}}>
-            {/* Left Vertical Brand Bar */}
             <div style={{width: '96px', backgroundColor: '#FF5722', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', padding: '24px'}}>
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg>
               <p style={{ transform: 'rotate(180deg)', color: 'white', fontWeight: 600, letterSpacing: '0.1em', writingMode: 'vertical-rl' }}>
                 45-DAY CHALLENGE
               </p>
             </div>
-            {/* Right Main Content Area */}
             <div style={{ flex: '1', padding: '48px', display: 'flex', flexDirection: 'column' }}>
               <div>
                 <p style={{ fontSize: '14px', fontWeight: 600, color: '#A0AEC0', letterSpacing: '0.1em' }}>CERTIFICATE OF ACHIEVEMENT</p>
@@ -90,7 +89,8 @@ export async function GET(
       }
     );
   } catch (e: any) {
-    console.error(`Failed to generate OG image for user ${userId}:`, e.message);
+    const error = e as Error;
+    console.error(`Failed to generate OG image for user ${userId}:`, error.message);
     return new Response(`Failed to generate the image`, { status: 500 });
   }
 }

@@ -79,17 +79,19 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
   };
 
   // Add this helper function
-  const calculateAge = (dateString: string) => {
-      if (!dateString) return 'N/A';
-      const today = new Date();
-      const birthDate = new Date(dateString);
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const m = today.getMonth() - birthDate.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-          age--;
-      }
-      return age;
-  };
+  const calculateAge = (dateString: string | null): number | string => {
+    if (!dateString) {
+        return 'N/A'; // If dob is null or an empty string, return 'N/A'
+    }
+    const today = new Date();
+    const birthDate = new Date(dateString);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age;
+};
 
   // --- TASK 2: Handle Routine Change ---
   const handleChangeRoutine = async () => {
@@ -118,7 +120,8 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
     router.refresh();
   };
 
-  const isCertificateUnlocked = userProfile.current_streak >= 45;
+  // const isCertificateUnlocked = userProfile.current_streak >= 45;
+  const isCertificateUnlocked = (userProfile.current_streak ?? 0) >= 45;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -135,7 +138,7 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-center">
               <div>
-                <div className="text-2xl font-bold text-primary">{userProfile.current_streak + 1}/45</div>
+                <div className="text-2xl font-bold text-primary">{(userProfile.current_streak ?? 0)  + 1}/45</div>
                 <div className="text-sm text-muted-foreground">Current Day</div>
               </div>
               <div>
@@ -162,7 +165,8 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
                 </DialogHeader>
                 <div className="py-4">
                   <Label>New Routine</Label>
-                  <Select onValueChange={(value: 'Home' | 'Gym') => setNewRoutine(value)} defaultValue={userProfile.workout_routine}>
+                  {/* <Select onValueChange={(value: 'Home' | 'Gym') => setNewRoutine(value)} defaultValue={userProfile.workout_routine}> */}
+                  <Select onValueChange={(value: 'Home' | 'Gym') => setNewRoutine(value)} defaultValue={userProfile.workout_routine || undefined}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                           <SelectItem value="Home">🏠 Home</SelectItem>
@@ -198,7 +202,7 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader><DialogTitle>Update Your Name</DialogTitle></DialogHeader>
-                            <Input placeholder="Enter your full name" value={newName} onChange={(e) => setNewName(e.target.value)} />
+                            <Input placeholder="Enter your full name" value={newName || ''} onChange={(e) => setNewName(e.target.value)} />
                             <DialogFooter>
                                 <Button variant="ghost" onClick={() => setIsNameDialogOpen(false)}>Cancel</Button>
                                 <Button onClick={handleUpdateName} disabled={isUpdating}>
@@ -209,7 +213,6 @@ export default function ProfileClient({ userProfile }: ProfileClientProps) {
                     </Dialog>
                 </div>
             </div>
-            {/* <div className="flex justify-between"><span className="text-muted-foreground">Age:</span> <span className="font-medium">{userProfile.age}</span></div> */}
             <div className="flex justify-between"><span className="text-muted-foreground">Age:</span> <span className="font-medium">{calculateAge(userProfile.dob)}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Gender:</span> <span className="font-medium capitalize">{userProfile.gender}</span></div>
             <div className="flex justify-between items-center">

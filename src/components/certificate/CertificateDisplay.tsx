@@ -12,15 +12,23 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Flame, Download, Share2, ArrowLeft, CheckCircle, Linkedin, MessageCircle } from 'lucide-react';
 
+// This type defines the SHAPE of the object that will be passed inside the 'data' prop.
 type CertificateData = {
   name: string;
   routine: string;
   completionDate: string;
   credentialUrl: string;
-  credentialId: string; // Type now includes credentialId
+  credentialId: string;
 };
 
-export default function CertificateDisplay({ data }: CertificateData) {
+// ✅ THE FIX: This type definition explicitly says the component receives ONE prop named 'data',
+// and the value of that prop is an object matching the CertificateData type.
+type CertificateDisplayProps = {
+  data: CertificateData;
+};
+
+// The function signature now correctly matches the Props type.
+export default function CertificateDisplay({ data }: CertificateDisplayProps) {
   const certificateRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { toast } = useToast();
@@ -41,6 +49,7 @@ export default function CertificateDisplay({ data }: CertificateData) {
     toast({ title: "Credential URL Copied!" });
   };
 
+  // The rest of the component JSX remains exactly the same.
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4 font-sans">
       <div className="w-full max-w-5xl mx-auto">
@@ -82,7 +91,6 @@ export default function CertificateDisplay({ data }: CertificateData) {
                   <p className="text-sm text-gray-500">Date of Completion</p>
                 </div>
               </div>
-              {/* ✅ THE FIX: Display both the ID and the URL */}
               <div className="text-right text-xs text-gray-400">
                 <p>Credential ID: {data.credentialId}</p>
                 <p>Credential URL: {data.credentialUrl}</p>
